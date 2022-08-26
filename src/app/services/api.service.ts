@@ -15,6 +15,13 @@ class Sword {
   user?: any;
 }
 
+class Post {
+  body?: string;
+  timestamp?: Date;
+  updated?: Date;
+  user?: any;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -28,6 +35,53 @@ export class ApiService {
     return this.http.post<Token>(`${this.apiUrl}/token/`, {
       username, password
     });
+  }
+
+  getPosts(token: string) {
+    const reqHeader = new HttpHeaders({ 
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    });
+    return this.http.get<Post>(`${this.apiUrl}/api/post`, { headers: reqHeader });
+  }
+
+  getPost(token: string, postId: string) {
+    const reqHeader = new HttpHeaders({ 
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    });
+    return this.http.get<Post>(`${this.apiUrl}/api/post/${postId}`, { headers: reqHeader });
+  }
+
+  postPost(token: string, body: string) {
+    const reqHeader = new HttpHeaders({ 
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    });
+    return this.http.post<Post>(`${this.apiUrl}/api/post`, { body }, { headers: reqHeader });
+  }
+
+  postLike(token: string, postId: string) {
+    const reqHeader = new HttpHeaders({ 
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    });
+
+    return this.http.post<Post>(`${this.apiUrl}/api/postlike`, {
+      post: +postId
+    }, { headers: reqHeader });
+  }
+
+  postComment(token: string, postId: number, comment: string) {
+    const reqHeader = new HttpHeaders({ 
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    });
+
+    return this.http.post<Post>(`${this.apiUrl}/api/postcomment`, {
+      post: postId,
+      comment: comment
+    }, { headers: reqHeader });
   }
 
   getSwords(token: string) {

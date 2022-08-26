@@ -2,23 +2,88 @@
 <div class="content" role="main">
 
   <header>
-    This is the Header Baby
+    MetaMUD.dev
   </header>
 
   <main>
-    <div style="display: block; font-family: monospace; white-space: pre;">
-      {{output}}
+    <div class="terminal" #terminal (click)="focusTerminal()">
+      <div *ngIf="output.type === 'text'">{{output.data}}</div>
+      <div *ngIf="output.type === 'posts'">
+        <div *ngFor="let post of output.data" class="posts">
+          <div class="post">
+            <div class="post-header">
+              <div class="post-header-left">
+                <div class="post-header-name">
+                  @{{post.user.username}}
+                </div>
+              </div>
+              <div class="post-header-right">
+                #general
+              </div>
+            </div>
+            <div class="post-body">
+              {{post.body}}
+            </div>
+            <div class="post-footer">
+              <div>
+                id: {{post._id}}
+              </div>
+              <div>
+                {{post.timestamp}}
+              </div>
+            </div>
+          </div>
+          <div class="comments" *ngIf="latestPost">
+            <div class="comment" *ngFor="let comment of post.comments">
+              <div class="comment-header">
+                <div class="comment-header-left">
+                  <div class="comment-header-name">
+                    @{{comment.user.username}}
+                  </div>
+                </div>
+                <div class="comment-header-right">
+                  #general
+                </div>
+              </div>
+              <div class="comment-body">
+                {{comment.comment}}
+              </div>
+              <div class="comment-footer">
+                <div>
+                  id: {{comment._id}}
+                </div>
+                <div>
+                  {{comment.timestamp}}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
-    <div>
-      <input type="text" id="cmd" [(ngModel)]="cmd" (keyup.enter)="submitData()">
-      <button type="button" (click)="submitData()">
-        Submit
-      </button>
+
+    <div class="terminal-bottom">
+      <div class="terminal-data">
+        <div class="terminal-input">
+          <div class="terminal-type">
+            <span>$</span>
+            <input autofocus #terminalInput type="text" id="cmd" [(ngModel)]="cmd" (keyup.enter)="submitData()">
+          </div>
+          <button type="button" (click)="submitData()">
+            Submit
+          </button>
+        </div>
+        <div class="terminal-cmds">
+          <div *ngFor="let cmd of getCmdList()">
+            <button type="button" (click)="selectCmd(cmd)">
+              {{cmd}}
+            </button>
+          </div>
+        </div>
+      </div>
+    
+      <footer>
+        &copy; 2022 MetaMUD
+      </footer>
     </div>
-  </main>
-
-  <footer>
-    This is the Footer Baby
-  </footer>
-
-</div>
+</main>
