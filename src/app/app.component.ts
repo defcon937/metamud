@@ -12,12 +12,13 @@ export class AppComponent {
   @ViewChild("terminalInput") terminalInput?: ElementRef;
   title = 'metamud-frontend';
   @Input() cmd: string = '';
-  output = {type: 'text', data: 'Type "help" for help!'} as any;
+  output = {type: 'text', data: 'Type "posts" for the latest posts!'} as any;
   latestPosts = [] as any[];
   latestPost = {} as any;
   token = {} as any;
   readyForCommand: boolean = true;
   postsTimeout: any;
+  defaultHashtag: any = "";
 
   constructor(private apiService: ApiService) {
     try {
@@ -38,20 +39,31 @@ export class AppComponent {
   cmds = {
     'login': (args: any[]) => this.login(args),
     'posts': (args: any[]) => this.posts(args),
-    'post': (args: any[]) => this.newPost(args),
+    'ask': (args: any[]) => this.newPost(args),
     'like': (args: any[]) => this.likePost(args),
-    'view': (args: any[]) => this.viewPost(args),
-    'clear': (args: any[]) => this.viewPost(args),
-    'comment': (args: any[]) => this.commentPost(args),
+    'post': (args: any[]) => this.viewPost(args),
+    'clear': (args: any[]) => this.clear(args),
+    'say': (args: any[]) => this.commentPost(args),
     'help': (args: any[]) => this.help(args),
+    'logout': (args: any[]) => this.logout(args),
+    'register': (args: any[]) => this.register(args),
+    'refresh': (args: any[]) => this.refresh(args),
+    'roll': (args: any[]) => this.rollComment(args),
+    'encounter': (args: any[]) => this.newEncounter(args),
+    'attack': (args: any[]) => this.simpleAttack(args)
   } as any;
 
   cmdsHelp = {
     'login': '<username> <password>',
-    'post': '<content>',
-    'like': '<post_id>',
-    'view': '<post_id>',
-    'comment': '<comment>'
+    'ask': '<hashtag> <content...>',
+    'like': '<post_id|comment>',
+    'post': '<post_id>',
+    'say': '<comment...>',
+    'posts': '[hashtag]',
+    'register': '<token> <username> <password>',
+    'roll': '[dice_count:1] [dice_size:20]',
+    'encounter': '<hashtag> <Encounter Name> <Encounter Type> <level> <Description...>',
+    'attack': '<Description...>'
   } as any;
 
   selectCmd(cmd: string) {
@@ -87,6 +99,44 @@ export class AppComponent {
     this.output = {type: 'text', data: "There is no help, sorry lol."};
   }
 
+  register(args: any[]) {
+    if (args.length < 3) {
+      this.output = {type: 'text', data: "Failed to log in. /login <username> <password>"};
+      return;
+    }
+
+    this.output = {type: 'text', data: "Logging in..."};
+
+    const token = args[0];
+    const email = args[1]
+    const username = args[2];
+    const password = args[3];
+
+    this.apiService.postRegister(token, email, username, password).subscribe((data: any) => {
+      console.log("Data", data);
+      this.output = {type: 'text', data: "Register success!"};
+      localStorage.setItem('login', JSON.stringify(data));
+      this.token = data;
+    });
+
+  }
+
+  logout(args: any[]) {
+    this.output = {type: 'text', data: "Logged out!"};
+    localStorage.setItem('login', JSON.stringify({}));
+    this.token = undefined;
+  }
+
+  refresh(args: any[]) {
+    this.output = {type: 'text', data: "Loading..."};
+
+    if (this.latestPost) {
+      this.viewPostById([this.latestPost.id]);
+    } else {
+      this.posts([this.defaultHashtag]);
+    }
+  }
+
   viewPost(args: any[]) {
     this.output = {type: 'text', data: "Loading..."};
     
@@ -108,8 +158,13 @@ export class AppComponent {
       console.log("Data", data);
       this.latestPost = data[0];
       this.latestPost._id = pid;
+      this.latestPost._timestamp = new Date(post.timestamp);
+      this.latestPost._timedate = `${post._timestamp.toLocaleDateString()} ${post._timestamp.toLocaleTimeString()}`
+
       this.latestPost.comments.map((comment: any, cid: number) => {
         comment._id = cid+1;
+        comment._timestamp = new Date(comment.timestamp);
+        comment._timedate = `${comment._timestamp.toLocaleDateString()} ${comment._timestamp.toLocaleTimeString()}`
       });
 
       this.output = {type: 'posts', data}
@@ -128,8 +183,12 @@ export class AppComponent {
     this.apiService.getPost(this.token.access, pid).subscribe((data: any) => {
       this.latestPost = data[0];
       this.latestPost._id = pid;
+      this.latestPost._timestamp = new Date(this.latestPost.timestamp);
+      this.latestPost._timedate = `${this.latestPost._timestamp.toLocaleDateString()} ${this.latestPost._timestamp.toLocaleTimeString()}`
       this.latestPost.comments.map((comment: any, cid: number) => {
         comment._id = cid+1;
+        comment._timestamp = new Date(comment.timestamp);
+        comment._timedate = `${comment._timestamp.toLocaleDateString()} ${comment._timestamp.toLocaleTimeString()}`
       });
       
       this.output = {type: 'posts', data}
@@ -142,9 +201,33 @@ export class AppComponent {
       return;
     }
 
-    this.apiService.postLike(this.token.access, args[0]).subscribe((data: any) => {
-      console.log(data);
-    });
+    const pid = +args[0];
+    let post: any;
+    let comment: any;
+
+    if (this.latestPost) {
+      if (pid === 0) {
+        post = this.latestPost;
+      } else {
+        comment = this.latestPost.comments.find((c: any) => c._id === pid);
+      }
+    } else {
+      post = this.latestPosts.find(data => data._id === pid);
+    }
+
+    if (post) {
+      this.apiService.postLike(this.token.access, post.id).subscribe((data: any) => {
+        console.log(data);
+        post.likes.push(data);
+      });
+    }
+
+    if (comment) {
+      this.apiService.postLikeComment(this.token.access, comment.id).subscribe((data: any) => {
+        console.log(data);
+        comment.likes.push(data);
+      });
+    }
   }
 
   commentPost(args: any[]) {
@@ -180,30 +263,132 @@ export class AppComponent {
     });
   }
 
-  clear(args: any[]) {
+  rollComment(args: any[]) {
     this.output = {type: 'text', data: "Loading..."};
+    
+    let pid = +args[0];
+    let comment;
+    let dice_count;
+    let dice_size;
+
+    if (this.latestPost) {
+      pid = this.latestPost.id;
+
+      dice_count = +args[0] ? +args[0] : 1;
+      dice_size = +args[1] ? +args[1] : 20;
+
+      console.log("Pid", this.latestPost, this.latestPost.id);
+    } else {
+      if (args.length < 1) {
+        this.output = {type: 'text', data: "/roll <post_id> [dice_count] [dice_size]"};
+        return;
+      }
+  
+      const post = this.latestPosts.find(data => data._id === pid);
+      
+      if (!post) {
+        this.output = {type: 'text', data: "Post not found."};
+        return;
+      }
+
+      dice_count = +args[1] ? +args[1] : 1;
+      dice_size = +args[2] ? +args[2] : 20;
+
+      pid = post.id;
+      comment = args.slice(1).join(" ");
+    }
+
+    if (dice_count < 1 || dice_size < 2) {
+      this.output = {type: 'text', data: "/roll <post_id> [dice_count (greater than 0)] [dice_size (greater than 1)]"};
+      return;
+    }
+
+    this.apiService.postCommentRoll(this.token.access, pid, dice_count, dice_size).subscribe((data: any) => {
+      console.log(data);
+      this.viewPostById([pid]);
+    });
+  }
+
+  clear(args: any[]) {
+    this.output = {type: 'text', data: "Type 'help' for help."};
+  }
+
+  newEncounter(args: any[]) {
+    this.output = {type: 'text', data: "Loading..."};
+    
+    if (args.length < 5) {
+      return;
+    }
+
+    const hashtag = args[0];
+    const action_name = args[1];
+    const action_type = args[2];
+    const action_level = args[3];
+    const post = args.slice(4).join(" ").trim();
+
+    this.apiService.postEncounter(this.token.access, hashtag, action_name,
+        action_type, action_level, post).subscribe((data: any) => {
+      console.log(data);
+      this.viewPostById([data.id]);
+    });
   }
 
   newPost(args: any[]) {
     this.output = {type: 'text', data: "Loading..."};
 
-    const post = args.join(" ").trim();
+    if (args.length < 2) {
+      return;
+    }
 
-    if (!post) return;
+    const hashtag = args[0];
+    const post = args.slice(1).join(" ").trim();
 
-    this.apiService.postPost(this.token.access, post).subscribe((data: any) => {
+    if (!post || !hashtag) return;
+
+    this.apiService.postPost(this.token.access, hashtag, post).subscribe((data: any) => {
       console.log(data);
-      this.posts([]);
+      this.viewPostById([data.id]);
+    });
+  }
+
+  simpleAttack(args: any[]) {
+    this.output = {type: 'text', data: "Loading..."};
+    
+    let pid: number;
+    let comment;
+
+    if (this.latestPost) {
+      pid = this.latestPost.id;
+      comment = args.join(" ");
+      console.log("Pid", this.latestPost, this.latestPost.id);
+    } else {
+      this.output = {type: 'text', data: "Post not found."};
+      return;
+    }
+
+    this.apiService.postSimpleAttack(this.token.access, pid, comment).subscribe((data: any) => {
+      console.log(data);
+      this.viewPostById([pid]);
     });
   }
 
   posts(args: any[]) {
     this.output = {type: 'text', data: "Loading..."};
     this.latestPost = undefined;
+    let hashtag = undefined;
 
-    this.apiService.getPosts(this.token.access).subscribe((d: any) => {
+    if (args.length > 0 && args[0]) {
+      hashtag = args[0];
+      this.defaultHashtag = hashtag;
+    }
+
+    this.defaultHashtag = hashtag;
+
+    this.apiService.getPosts(this.token.access, hashtag).subscribe((d: any) => {
       this.latestPosts = d.map((post: any, pid: number) => {
         post._id = pid+1
+        post._timestamp = new Date(post.timestamp);
+        post._timedate = `${post._timestamp.toLocaleDateString()} ${post._timestamp.toLocaleTimeString()}`
         return post;
       });
 

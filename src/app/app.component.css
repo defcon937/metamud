@@ -119,6 +119,7 @@ main {
 }
 
 .post-body {
+    white-space: pre-wrap;
     padding: 15px;
 }
 
@@ -133,6 +134,11 @@ main {
 .comments {
     display: flex;
     flex-direction: column;
+}
+
+.comments-header {
+    padding: 15px 5px;
+    font-size: 14px;
 }
 
 .comment {
@@ -157,6 +163,7 @@ main {
 }
 
 .comment-body {
+    white-space: pre-wrap;
     padding: 15px;
 }
 

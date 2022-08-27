@@ -18,22 +18,21 @@
                 </div>
               </div>
               <div class="post-header-right">
-                #general
+                #{{post.hashtag}}
               </div>
             </div>
-            <div class="post-body">
-              {{post.body}}
-            </div>
+            <div class="post-body">{{post.body}}</div>
             <div class="post-footer">
               <div>
-                id: {{post._id}}
+                {{post.likes.length}} Likes - id: <span *ngIf="!latestPost">{{post._id}}</span><span *ngIf="latestPost">0</span> <span *ngIf="post.action"> - {{post.action}}</span>
               </div>
               <div>
-                {{post.timestamp}}
+                {{post._timedate}}
               </div>
             </div>
           </div>
           <div class="comments" *ngIf="latestPost">
+            <div class="comments-header">Comments</div>
             <div class="comment" *ngFor="let comment of post.comments">
               <div class="comment-header">
                 <div class="comment-header-left">
@@ -42,18 +41,15 @@
                   </div>
                 </div>
                 <div class="comment-header-right">
-                  #general
                 </div>
               </div>
-              <div class="comment-body">
-                {{comment.comment}}
-              </div>
+              <div class="comment-body">{{comment.comment}}</div>
               <div class="comment-footer">
                 <div>
-                  id: {{comment._id}}
+                  {{comment.likes.length}} Likes - id: {{comment._id}} <span *ngIf="comment.action"> - {{comment.action}}</span>
                 </div>
                 <div>
-                  {{comment.timestamp}}
+                  {{comment._timedate}}
                 </div>
               </div>
             </div>

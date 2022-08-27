@@ -20,6 +20,7 @@ class Post {
   timestamp?: Date;
   updated?: Date;
   user?: any;
+  hashtag?: string;
 }
 
 @Injectable({
@@ -27,7 +28,7 @@ class Post {
 })
 export class ApiService {
 
-  apiUrl = "http://localhost:8000";
+  apiUrl = "/api";
 
   constructor(private http: HttpClient) { }
 
@@ -37,12 +38,22 @@ export class ApiService {
     });
   }
 
-  getPosts(token: string) {
+  postRegister(token: string, email: string, username: string, password: string) {
+    return this.http.post<Token>(`${this.apiUrl}/api/register`, {
+      first_name: token, email, username, password, password2: password
+    });
+  }
+
+  getPosts(token: string, hashtag?: string) {
     const reqHeader = new HttpHeaders({ 
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`
     });
-    return this.http.get<Post>(`${this.apiUrl}/api/post`, { headers: reqHeader });
+    if (hashtag) {
+      return this.http.get<Post>(`${this.apiUrl}/api/posts/${hashtag}`, { headers: reqHeader });
+    } else {
+      return this.http.get<Post>(`${this.apiUrl}/api/posts`, { headers: reqHeader });
+    }
   }
 
   getPost(token: string, postId: string) {
@@ -53,12 +64,22 @@ export class ApiService {
     return this.http.get<Post>(`${this.apiUrl}/api/post/${postId}`, { headers: reqHeader });
   }
 
-  postPost(token: string, body: string) {
+  postPost(token: string, hashtag: string, body: string) {
     const reqHeader = new HttpHeaders({ 
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`
     });
-    return this.http.post<Post>(`${this.apiUrl}/api/post`, { body }, { headers: reqHeader });
+    return this.http.post<Post>(`${this.apiUrl}/api/post`, { hashtag, body }, { headers: reqHeader });
+  }
+
+  postEncounter(token: string, hashtag: string, action_name: string, action_type: string, action_level: number, body: string) {
+    const reqHeader = new HttpHeaders({ 
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    });
+    return this.http.post<Post>(`${this.apiUrl}/api/encounter`, {
+      hashtag, body, action_name, action_type, action_level
+    }, { headers: reqHeader });
   }
 
   postLike(token: string, postId: string) {
@@ -69,6 +90,17 @@ export class ApiService {
 
     return this.http.post<Post>(`${this.apiUrl}/api/postlike`, {
       post: +postId
+    }, { headers: reqHeader });
+  }
+  
+  postLikeComment(token: string, commentId: string) {
+    const reqHeader = new HttpHeaders({ 
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    });
+
+    return this.http.post<Post>(`${this.apiUrl}/api/commentlike`, {
+      comment: +commentId
     }, { headers: reqHeader });
   }
 
@@ -84,12 +116,28 @@ export class ApiService {
     }, { headers: reqHeader });
   }
 
-  getSwords(token: string) {
+  postSimpleAttack(token: string, postId: number, comment: string) {
     const reqHeader = new HttpHeaders({ 
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`
     });
-    return this.http.get<Sword>(`${this.apiUrl}/api/sword`, { headers: reqHeader });
+
+    return this.http.post<Post>(`${this.apiUrl}/api/simpleattack`, {
+      post: postId,
+      comment: comment
+    }, { headers: reqHeader });
   }
 
+  postCommentRoll(token: string, postId: number, dice_count: number, dice_size: number) {
+    const reqHeader = new HttpHeaders({ 
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    });
+
+    return this.http.post<Post>(`${this.apiUrl}/api/postcommentroll`, {
+      post: postId,
+      dice_size,
+      dice_count
+    }, { headers: reqHeader });
+  }
 }
