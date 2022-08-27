@@ -44,13 +44,15 @@ export class ApiService {
     });
   }
 
-  getPosts(token: string, hashtag?: string) {
+  getPosts(token: string, hashtags?: string[]) {
     const reqHeader = new HttpHeaders({ 
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`
     });
-    if (hashtag) {
-      return this.http.get<Post>(`${this.apiUrl}/api/posts/${hashtag}`, { headers: reqHeader });
+    if (hashtags) {
+      return this.http.post<Post>(`${this.apiUrl}/api/posts`, {
+        hashtags
+      }, { headers: reqHeader });
     } else {
       return this.http.get<Post>(`${this.apiUrl}/api/posts`, { headers: reqHeader });
     }
@@ -93,6 +95,28 @@ export class ApiService {
     }, { headers: reqHeader });
   }
   
+  postEditPost(token: string, postId: string, key: string, value: string) {
+    const reqHeader = new HttpHeaders({ 
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    });
+
+    return this.http.patch<Post>(`${this.apiUrl}/api/post/${postId}`, {
+      key, value
+    }, { headers: reqHeader });
+  }
+
+  postEditComment(token: string, commentId: string, key: string, value: string) {
+    const reqHeader = new HttpHeaders({ 
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    });
+
+    return this.http.patch<Post>(`${this.apiUrl}/api/comment/${commentId}`, {
+      key, value
+    }, { headers: reqHeader });
+  }
+
   postLikeComment(token: string, commentId: string) {
     const reqHeader = new HttpHeaders({ 
       'Content-Type': 'application/json',
@@ -113,6 +137,25 @@ export class ApiService {
     return this.http.post<Post>(`${this.apiUrl}/api/postcomment`, {
       post: postId,
       comment: comment
+    }, { headers: reqHeader });
+  }
+
+  getFollow(token: string) {
+    const reqHeader = new HttpHeaders({ 
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    });
+    return this.http.get<Post>(`${this.apiUrl}/api/follow`, { headers: reqHeader });
+  }
+
+  postFollow(token: string, hashtag: string) {
+    const reqHeader = new HttpHeaders({ 
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    });
+
+    return this.http.post<Post>(`${this.apiUrl}/api/follow`, {
+      hashtag
     }, { headers: reqHeader });
   }
 

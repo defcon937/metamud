@@ -107,7 +107,7 @@ main {
 
 .post-header {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
     padding: 15px;
     background: #111;
@@ -116,6 +116,16 @@ main {
 .post-header-left {
     display: flex;
     flex-direction: column;
+}
+
+.post-header-right {
+    display: flex;
+    flex-direction: column;
+    text-align: right;
+}
+
+.post-header-bottom {
+    color: #888;
 }
 
 .post-body {

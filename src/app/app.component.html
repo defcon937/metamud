@@ -18,7 +18,12 @@
                 </div>
               </div>
               <div class="post-header-right">
-                #{{post.hashtag}}
+                <div>
+                  #{{post.hashtag}}
+                </div>
+                <div *ngIf="post.location" class="post-header-bottom">
+                  {{post.location}}
+                </div>
               </div>
             </div>
             <div class="post-body">{{post.body}}</div>
@@ -41,6 +46,9 @@
                   </div>
                 </div>
                 <div class="comment-header-right">
+                  <div *ngIf="post.location" class="post-header-bottom">
+                    {{comment.location}}
+                  </div>
                 </div>
               </div>
               <div class="comment-body">{{comment.comment}}</div>

@@ -18,7 +18,8 @@ export class AppComponent {
   token = {} as any;
   readyForCommand: boolean = true;
   postsTimeout: any;
-  defaultHashtag: any = "";
+  defaultHashtags: any = "";
+  following: any[] = [];
 
   constructor(private apiService: ApiService) {
     try {
@@ -30,6 +31,11 @@ export class AppComponent {
   ngAfterViewInit() {
     const height = this.terminal?.nativeElement.offsetHeight;
     this.terminal?.nativeElement.setAttribute('style', `max-height: ${height}px`);
+
+    this.apiService.getFollow(this.token.access).subscribe((data: any) => {
+      this.following = data;
+      this.posts([]);
+    });
   }
 
   focusTerminal() {
@@ -50,20 +56,26 @@ export class AppComponent {
     'refresh': (args: any[]) => this.refresh(args),
     'roll': (args: any[]) => this.rollComment(args),
     'encounter': (args: any[]) => this.newEncounter(args),
-    'attack': (args: any[]) => this.simpleAttack(args)
+    'attack': (args: any[]) => this.simpleAttack(args),
+    'follow': (args: any[]) => this.follow(args),
+    'all': (args: any[]) => this.all(args),
+    'edit': (args: any[]) => this.editPost(args),
+    'following': (args: any[]) => this.followingList(args),
   } as any;
 
   cmdsHelp = {
     'login': '<username> <password>',
     'ask': '<hashtag> <content...>',
-    'like': '<post_id|comment>',
+    'like': '<post_id|comment_id>',
     'post': '<post_id>',
     'say': '<comment...>',
     'posts': '[hashtag]',
-    'register': '<token> <username> <password>',
+    'register': '<token> <email> <username> <password>',
     'roll': '[dice_count:1] [dice_size:20]',
     'encounter': '<hashtag> <Encounter Name> <Encounter Type> <level> <Description...>',
-    'attack': '<Description...>'
+    'attack': '<Description...>',
+    'follow': '<hashtag>',
+    'edit': '<post_id|comment_id> <location|> <new value...>'
   } as any;
 
   selectCmd(cmd: string) {
@@ -97,6 +109,10 @@ export class AppComponent {
 
   help(args: any[]) {
     this.output = {type: 'text', data: "There is no help, sorry lol."};
+  }
+
+  followingList(args: any[]) {
+    this.output = {type: 'text', data: this.following.map(h => h.hashtag).join(", ")};
   }
 
   register(args: any[]) {
@@ -133,7 +149,47 @@ export class AppComponent {
     if (this.latestPost) {
       this.viewPostById([this.latestPost.id]);
     } else {
-      this.posts([this.defaultHashtag]);
+      this.posts([this.defaultHashtags]);
+    }
+  }
+
+  editPost(args: any[]) {
+    this.output = {type: 'text', data: "Loading..."};
+    
+    if (args.length < 3) {
+      return;
+    }
+    
+    const pid = +args[0];
+    let post: any;
+    let comment: any;
+
+    if (this.latestPost) {
+      if (pid === 0) {
+        post = this.latestPost;
+      } else {
+        comment = this.latestPost.comments.find((c: any) => c._id === pid);
+      }
+    } else {
+      post = this.latestPosts.find(data => data._id === pid);
+    }
+    
+    const editKey = args[1];
+    const editValue = args.slice(2).join(" ");
+
+    if (post) {
+      this.apiService.postEditPost(this.token.access, post.id, editKey, editValue).subscribe((data: any) => {
+        console.log("Data", data);
+        post.location = data.location;
+        this.viewPostById([post.id]);
+      });
+    }
+
+    if (comment) {
+      this.apiService.postEditComment(this.token.access, comment.id, editKey, editValue).subscribe((data: any) => {
+        comment.location = data.location;
+        this.output = {type: 'posts', data: [this.latestPost]}
+      });
     }
   }
 
@@ -171,6 +227,21 @@ export class AppComponent {
     })
   }
   
+  follow(args: any[]) {
+    this.output = {type: 'text', data: "Loading..."};
+
+    if (args.length < 1) {
+      this.output = {type: 'text', data: "Failed to get post."};
+    }
+
+    const pid = args[0];
+
+    this.apiService.postFollow(this.token.access, pid).subscribe((data: any) => {
+      this.following.push(data);
+      this.posts([]);
+    })
+  }
+
   viewPostById(args: any[]) {
     this.output = {type: 'text', data: "Loading..."};
 
@@ -372,19 +443,50 @@ export class AppComponent {
     });
   }
 
+  all(args: any[]) {
+    this.apiService.getPosts(this.token.access).subscribe((d: any) => {
+      this.latestPosts = d.map((post: any, pid: number) => {
+        post._id = pid+1
+        post._timestamp = new Date(post.timestamp);
+        post._timedate = `${post._timestamp.toLocaleDateString()} ${post._timestamp.toLocaleTimeString()}`
+        return post;
+      });
+
+      console.log(this.latestPosts);
+
+      this.output = {type: 'posts', data: []};
+      let renderCount = 0;
+      const maxRender = this.latestPosts.length;
+
+      console.log("max Ren")
+
+      this.postsTimeout = setInterval(() => {
+        if (renderCount < maxRender) {
+          this.output = {
+            type: 'posts',
+            data: this.latestPosts.slice(0, renderCount+1)
+          }
+          renderCount++;
+        } else {
+          clearInterval(this.postsTimeout);
+        }
+      }, 100);
+    });
+  }
+
   posts(args: any[]) {
     this.output = {type: 'text', data: "Loading..."};
     this.latestPost = undefined;
-    let hashtag = undefined;
+    let hashtags = this.following.map(h => h.hashtag);
 
-    if (args.length > 0 && args[0]) {
-      hashtag = args[0];
-      this.defaultHashtag = hashtag;
+    if (args.length > 0) {
+      hashtags = args;
+      this.defaultHashtags = hashtags;
     }
 
-    this.defaultHashtag = hashtag;
+    this.defaultHashtags = hashtags;
 
-    this.apiService.getPosts(this.token.access, hashtag).subscribe((d: any) => {
+    this.apiService.getPosts(this.token.access, hashtags).subscribe((d: any) => {
       this.latestPosts = d.map((post: any, pid: number) => {
         post._id = pid+1
         post._timestamp = new Date(post.timestamp);
