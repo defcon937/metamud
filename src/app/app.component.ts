@@ -35,6 +35,15 @@ export class AppComponent {
     this.apiService.getFollow(this.token.access).subscribe((data: any) => {
       this.following = data;
       this.posts([]);
+    }, error => {
+      console.log("Error", error);
+
+      if (error.status === 401) {
+        this.output = {type: 'text', data: "You are currently not logged in! Do `register <token> <email> <username> <password>` to get started!"};
+      }
+
+      this.token = {};
+      localStorage.setItem('login', JSON.stringify({}));
     });
   }
 
@@ -116,6 +125,11 @@ export class AppComponent {
   }
 
   register(args: any[]) {
+    if (this.token.access) {
+      this.output = {type: 'text', data: "Please do /logout before registering a new account!"};
+      return;
+    }
+
     if (args.length < 3) {
       this.output = {type: 'text', data: "Failed to log in. /login <username> <password>"};
       return;
@@ -133,6 +147,11 @@ export class AppComponent {
       this.output = {type: 'text', data: "Register success!"};
       localStorage.setItem('login', JSON.stringify(data));
       this.token = data;
+      this.login([username, password]);
+    }, (error: any) => {
+      console.log("Error", error);
+      this.output = {type: 'text', data: `Failed to create an account! Errors:\r\n\r\n${Object.keys(error.error).map(
+        (e: any) => `${e}: ${error.error[e].join(", ")}`).join("\r\n- ")}`};
     });
 
   }
@@ -526,9 +545,9 @@ export class AppComponent {
 
     this.apiService.getLogin(args[0], args[1]).subscribe((data: any) => {
       console.log("Data", data);
-      this.output = {type: 'text', data: "Logged in!"};
       localStorage.setItem('login', JSON.stringify(data));
       this.token = data;
+      this.posts([]);
     });
   }
 
